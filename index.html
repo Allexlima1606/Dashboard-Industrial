@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Industrial</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#007bff">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+body{margin:0;font-family:Arial;background:#f4f6f9;}
+.container{padding:15px;}
+h1{text-align:center;}
+.form-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+gap:8px;margin-bottom:15px;}
+input,button{
+padding:8px;border-radius:6px;border:1px solid #ccc;}
+button{color:white;font-weight:bold;cursor:pointer;}
+.btn-blue{background:#007bff;}
+.btn-green{background:#198754;}
+.btn-red{background:#dc3545;}
+.cards{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+gap:10px;}
+.card{
+padding:12px;border-radius:8px;
+color:white;text-align:center;font-weight:bold;}
+.green{background:#28a745;}
+.red{background:#dc3545;}
+.blue{background:#007bff;}
+.orange{background:#fd7e14;}
+.chart-container{
+margin-top:20px;background:white;
+padding:15px;border-radius:10px;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>🏭 Dashboard Industrial</h1>
+
+<div class="form-grid">
+<input type="number" id="quantidade" placeholder="Qtd Peças">
+<input type="number" id="metroPorPeca" placeholder="m² por Peça">
+<input type="number" id="amostragem" placeholder="Amostragem">
+<input type="number" id="defeitos" placeholder="Defeitos">
+<input type="number" id="metaHora" placeholder="Meta m²">
+<button class="btn-blue" onclick="calcular()">Calcular</button>
+<button class="btn-green" onclick="exportarExcel()">Exportar Excel</button>
+<button class="btn-red" onclick="limparDia()">Limpar Dia</button>
+</div>
+
+<div class="cards">
+<div id="producao" class="card blue">Produção: 0 m²</div>
+<div id="qualidade" class="card blue">Qualidade: 0%</div>
+<div id="perda" class="card orange">Perda: 0 m²</div>
+<div id="atingimento" class="card blue">Atingimento: 0%</div>
+</div>
+
+<div class="chart-container">
+<canvas id="grafico"></canvas>
+</div>
+
+</div>
+
+<script>
+let chart;
+
+function get(id){
+return parseFloat(document.getElementById(id).value) || 0;
+}
+
+function getDataHoje(){
+return new Date().toISOString().split("T")[0];
+}
+
+const chaveHoje = "producao_" + getDataHoje();
+let historico = JSON.parse(localStorage.getItem(chaveHoje)) || [];
+
+function salvarLocal(){
+localStorage.setItem(chaveHoje, JSON.stringify(historico));
+}
+
+function calcular(){
+
+const quantidade = get("quantidade");
+const metroPorPeca = get("metroPorPeca");
+const amostragem = get("amostragem");
+const defeitos = get("defeitos");
+const metaHora = get("metaHora");
+
+const producao = quantidade * metroPorPeca;
+const perda = defeitos * metroPorPeca;
+
+const qualidade = amostragem 
+? ((amostragem - defeitos) / amostragem) * 100 
+: 0;
+
+const atingimento = metaHora 
+? (producao / metaHora) * 100 
+: 0;
+
+atualizarCard("producao", `Produção: ${producao.toFixed(2)} m²`, true);
+atualizarCard("qualidade", `Qualidade: ${qualidade.toFixed(1)}%`, qualidade >= 95);
+atualizarCard("perda", `Perda: ${perda.toFixed(2)} m²`, perda === 0);
+atualizarCard("atingimento", `Atingimento: ${atingimento.toFixed(1)}%`, atingimento >= 100);
+
+historico.push({
+hora:new Date().toLocaleTimeString(),
+meta:metaHora,
+real:producao
+});
+
+salvarLocal();
+atualizarGrafico();
+}
+
+function atualizarCard(id,texto,status=true){
+const el=document.getElementById(id);
+el.innerHTML=texto;
+el.className="card "+(status?"green":"red");
+}
+
+function atualizarGrafico(){
+if(chart) chart.destroy();
+chart=new Chart(document.getElementById("grafico"),{
+type:"bar",
+data:{
+labels:historico.map(h=>h.hora),
+datasets:[
+{label:"Meta",data:historico.map(h=>h.meta),backgroundColor:"#dc3545"},
+{label:"Real",data:historico.map(h=>h.real),backgroundColor:"#28a745"}
+]},
+options:{responsive:true,scales:{y:{beginAtZero:true}}}
+});
+}
+
+function limparDia(){
+localStorage.removeItem(chaveHoje);
+historico=[];
+atualizarGrafico();
+}
+
+function exportarExcel(){
+if(historico.length===0){alert("Sem dados!");return;}
+
+const dados=historico.map(h=>({
+Data:getDataHoje(),
+Hora:h.hora,
+Meta_m2:h.meta,
+Real_m2:h.real,
+Atingimento:h.meta?((h.real/h.meta)*100).toFixed(1):0
+}));
+
+const ws=XLSX.utils.json_to_sheet(dados);
+const wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,"Produção");
+XLSX.writeFile(wb,`Producao_${getDataHoje()}.xlsx`);
+}
+
+if('serviceWorker' in navigator){
+navigator.serviceWorker.register('sw.js');
+}
+
+atualizarGrafico();
+</script>
+
+</body>
+</html>
