@@ -50,10 +50,10 @@ padding:15px;border-radius:10px;}
 <div class="form-grid">
 <input type="number" id="quantidade" placeholder="Qtd Peças">
 <input type="number" id="metroPorPeca" placeholder="m² por Peça">
-<input type="number" id="amostragem" placeholder="Amostragem">
 <input type="number" id="defeitos" placeholder="Defeitos">
 <input type="number" id="metaHora" placeholder="Meta m²">
-<button class="btn-blue" onclick="calcular()">Calcular</button>
+
+<button class="btn-blue" onclick="registrarHora()">Registrar Hora</button>
 <button class="btn-green" onclick="exportarExcel()">Exportar Excel</button>
 <button class="btn-red" onclick="limparDia()">Limpar Dia</button>
 </div>
@@ -89,29 +89,41 @@ function salvarLocal(){
 localStorage.setItem(chaveHoje, JSON.stringify(historico));
 }
 
-function calcular(){
+function calcularAutomatico(){
 
 const quantidade = get("quantidade");
 const metroPorPeca = get("metroPorPeca");
-const amostragem = get("amostragem");
 const defeitos = get("defeitos");
 const metaHora = get("metaHora");
 
 const producao = quantidade * metroPorPeca;
 const perda = defeitos * metroPorPeca;
+const pecasBoas = quantidade - defeitos;
 
-const qualidade = amostragem 
-? ((amostragem - defeitos) / amostragem) * 100 
+const qualidade = quantidade 
+? (pecasBoas / quantidade) * 100 
 : 0;
 
 const atingimento = metaHora 
 ? (producao / metaHora) * 100 
 : 0;
 
+// REGRA PRINCIPAL
+const atingiuMeta = producao >= metaHora;
+
 atualizarCard("producao", `Produção: ${producao.toFixed(2)} m²`, true);
 atualizarCard("qualidade", `Qualidade: ${qualidade.toFixed(1)}%`, qualidade >= 95);
 atualizarCard("perda", `Perda: ${perda.toFixed(2)} m²`, perda === 0);
-atualizarCard("atingimento", `Atingimento: ${atingimento.toFixed(1)}%`, atingimento >= 100);
+atualizarCard("atingimento", `Atingimento: ${atingimento.toFixed(1)}%`, atingiuMeta);
+}
+
+function registrarHora(){
+
+const quantidade = get("quantidade");
+const metroPorPeca = get("metroPorPeca");
+const metaHora = get("metaHora");
+
+const producao = quantidade * metroPorPeca;
 
 historico.push({
 hora:new Date().toLocaleTimeString(),
@@ -131,15 +143,30 @@ el.className="card "+(status?"green":"red");
 
 function atualizarGrafico(){
 if(chart) chart.destroy();
+
 chart=new Chart(document.getElementById("grafico"),{
 type:"bar",
 data:{
 labels:historico.map(h=>h.hora),
 datasets:[
-{label:"Meta",data:historico.map(h=>h.meta),backgroundColor:"#dc3545"},
-{label:"Real",data:historico.map(h=>h.real),backgroundColor:"#28a745"}
-]},
-options:{responsive:true,scales:{y:{beginAtZero:true}}}
+{
+label:"Meta",
+data:historico.map(h=>h.meta),
+backgroundColor:"#007bff"
+},
+{
+label:"Real",
+data:historico.map(h=>h.real),
+backgroundColor:historico.map(h =>
+h.real >= h.meta ? "#28a745" : "#dc3545"
+)
+}
+]
+},
+options:{
+responsive:true,
+scales:{y:{beginAtZero:true}}
+}
 });
 }
 
@@ -166,10 +193,15 @@ XLSX.utils.book_append_sheet(wb,ws,"Produção");
 XLSX.writeFile(wb,`Producao_${getDataHoje()}.xlsx`);
 }
 
+document.querySelectorAll("input").forEach(input=>{
+input.addEventListener("input", calcularAutomatico);
+});
+
 if('serviceWorker' in navigator){
 navigator.serviceWorker.register('sw.js');
 }
 
+calcularAutomatico();
 atualizarGrafico();
 </script>
 
