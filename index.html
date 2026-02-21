@@ -4,162 +4,39 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Industrial</title>
+<link rel="stylesheet" href="style.css">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-<style>
-:root{
---bg:#eef2f7;
---card:#ffffff;
---text:#1f2937;
---primary:#2563eb;
---success:#16a34a;
---danger:#dc2626;
---border:rgba(10, 10, 10, 0.301);
---shadow:0 10px 25px rgba(0,0,0,0.08);
-}
-
-.dark{
---bg:#0f172a;
---card:#1e293b;
---text:#f1f5f9;
---primary:#3b82f6;
---success:#22c55e;
---danger:#ef4444;
---border:rgba(255, 255, 255, 0.37);
---shadow:0 10px 25px rgba(0,0,0,0.4);
-}
-
-body{
-margin:0;
-font-family:'Segoe UI',sans-serif;
-background:var(--bg);
-color:var(--text);
-transition:0.3s;
-}
-
-.container{
-max-width:520px;
-margin:auto;
-padding:20px;
-min-height:100vh;
-}
-
-h1{
-text-align:center;
-margin-bottom:35px;
-letter-spacing:0.5px;
-}
-
-.top-bar{
-display:flex;
-justify-content:flex-end;
-margin-bottom:10px;
-}
-
-button{
-padding:10px 14px;
-border-radius:25px;
-border:1px solid var(--border);
-font-weight:600;
-cursor:pointer;
-background:var(--primary);
-color:white;
-margin:4px;
-transition:0.2s;
-box-shadow:var(--shadow);
-}
-
-button:hover{
-transform:translateY(-2px);
-opacity:0.9;
-}
-
-.form-grid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:10px;
-margin-bottom:15px;
-}
-
-input{
-padding:12px;
-border-radius:14px;
-border:2px solid var(--border);
-background:var(--card);
-color:var(--text);
-box-shadow:var(--shadow);
-outline:none;
-transition:0.2s;
-}
-
-input:focus{
-border:1px solid var(--primary);
-box-shadow:0 0 0 3px rgba(37,99,235,0.15);
-}
-
-.cards{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:12px;
-margin-bottom:10px;
-}
-
-.card{
-padding:18px;
-border-radius:22px;
-text-align:center;
-font-weight:600;
-box-shadow:var(--shadow);
-border:1px solid var(--border);
-transition:0.3s;
-}
-
-.green{
-background:linear-gradient(135deg,var(--success),#34d399);
-color:white;
-border:none;
-}
-
-.red{
-background:linear-gradient(135deg,var(--danger),#f87171);
-color:white;
-border:none;
-}
-
-.progress-container{
-height:18px;
-background:rgba(0,0,0,0.05);
-border-radius:30px;
-margin-top:10px;
-overflow:hidden;
-border:1px solid var(--border);
-}
-
-.dark .progress-container{
-background:rgba(255,255,255,0.1);
-}
-
-.progress-bar{
-height:100%;
-width:0%;
-border-radius:30px;
-transition:0.4s ease;
-}
-
-.chart-container{
-margin-top:20px;
-background:var(--card);
-padding:20px;
-border-radius:25px;
-box-shadow:var(--shadow);
-border:1px solid var(--border);
-}
-</style>
 </head>
 
 <body>
+
+  <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyC2vn8Ep1ISpZiEq9J8OdjnEenKkRkN66c",
+    authDomain: "dashboard-industrial-2b9f8.firebaseapp.com",
+    projectId: "dashboard-industrial-2b9f8",
+    storageBucket: "dashboard-industrial-2b9f8.firebasestorage.app",
+    messagingSenderId: "841286551560",
+    appId: "1:841286551560:web:761243855dc53d101369bd",
+    measurementId: "G-5ZTDQJXZ19"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+
 <div class="container">
 
 <h1>🏭 Dashboard Industrial</h1>
@@ -192,140 +69,7 @@ border:1px solid var(--border);
 <canvas id="grafico"></canvas>
 </div>
 
-</div>
-
-<script>
-let chart;
-let historico = [];
-
-function get(id){
-return parseFloat(document.getElementById(id).value) || 0;
-}
-
-function calcular(){
-
-const quantidade = get("quantidade");
-const metroPorPeca = get("metroPorPeca");
-const defeitos = get("defeitos");
-const metaHora = get("metaHora");
-
-const producao = quantidade * metroPorPeca;
-
-const qualidade = quantidade > 0 
-? ((quantidade - defeitos) / quantidade) * 100 
-: 0;
-
-const atingimento = metaHora ? (producao / metaHora) * 100 : 0;
-
-// Gradiente dinâmico fundo
-let cor;
-if(atingimento >= 100){
-cor = "#16a34a20";
-}
-else if(atingimento >= 80){
-cor = "#f59e0b20";
-}
-else{
-cor = "#dc262620";
-}
-document.body.style.background = `linear-gradient(180deg, ${cor}, var(--bg))`;
-
-atualizarCard("producao", `Produção: ${producao.toFixed(2)} m²`);
-atualizarCard("qualidade",
-`Qualidade: ${qualidade.toFixed(1)}%`,
-qualidade >= 95
-);
-
-atualizarCard("atingimento",
-`Atingimento: ${atingimento.toFixed(1)}%`,
-atingimento >= 100
-);
-
-const porcentagem = Math.min(atingimento,100);
-const barra = document.getElementById("barraMeta");
-barra.style.width = porcentagem + "%";
-barra.style.background =
-atingimento >= 100
-? "linear-gradient(90deg,#16a34a,#34d399)"
-: "linear-gradient(90deg,#dc2626,#f87171)";
-}
-
-function registrar(){
-calcular();
-
-historico.push({
-hora:new Date().toLocaleTimeString(),
-meta:get("metaHora"),
-real:get("quantidade") * get("metroPorPeca")
-});
-
-atualizarGrafico();
-}
-
-function atualizarCard(id,texto,status){
-const el=document.getElementById(id);
-el.innerHTML=texto;
-if(status===undefined){
-el.className="card";
-}else{
-el.className="card " + (status?"green":"red");
-}
-}
-
-function atualizarGrafico(){
-if(chart) chart.destroy();
-
-chart=new Chart(document.getElementById("grafico"),{
-type:"bar",
-data:{
-labels:historico.map(h=>h.hora),
-datasets:[
-{
-label:"Meta",
-data:historico.map(h=>h.meta),
-backgroundColor:"#3b82f6"
-},
-{
-label:"Real",
-data:historico.map(h=>h.real),
-backgroundColor:historico.map(h=>h.real>=h.meta?"#16a34a":"#dc2626")
-}
-]
-},
-options:{
-responsive:true,
-animation:{duration:800},
-scales:{y:{beginAtZero:true}}
-}
-});
-}
-
-function limparTudo(){
-historico=[];
-if(chart) chart.destroy();
-}
-
-function exportarExcel(){
-if(historico.length===0){alert("Sem dados!");return;}
-const dados=historico.map(h=>({
-Hora:h.hora,
-Meta:h.meta,
-Real:h.real,
-Atingimento:h.meta?((h.real/h.meta)*100).toFixed(1):0
-}));
-const ws=XLSX.utils.json_to_sheet(dados);
-const wb=XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(wb,ws,"Produção");
-XLSX.writeFile(wb,"Producao.xlsx");
-}
-
-function toggleTheme(){
-document.body.classList.toggle("dark");
-const isDark=document.body.classList.contains("dark");
-document.getElementById("themeBtn").innerText=
-isDark?"☀️ Modo Claro":"🌙 Modo Escuro";
-}
-</script>
+<script src="script.js"></script>
 
 </body>
 </html>
