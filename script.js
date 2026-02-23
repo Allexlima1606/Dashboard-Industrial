@@ -1,4 +1,3 @@
-
 let chart;
 let historico = [];
 
@@ -9,19 +8,23 @@ return parseFloat(document.getElementById(id).value) || 0;
 function calcular(){
 
 const quantidade = get("quantidade");
+const caco = get("caco");
 const metroPorPeca = get("metroPorPeca");
 const defeitos = get("defeitos");
 const metaHora = get("metaHora");
 
-const producao = quantidade * metroPorPeca;
+// Quantidade descontando o caco
+const quantidadeLiquida = Math.max(quantidade - caco, 0);
 
-const qualidade = quantidade > 0 
-? ((quantidade - defeitos) / quantidade) * 100 
+const producao = quantidadeLiquida * metroPorPeca;
+
+const qualidade = quantidadeLiquida > 0 
+? ((quantidadeLiquida - defeitos) / quantidadeLiquida) * 100 
 : 0;
 
 const atingimento = metaHora ? (producao / metaHora) * 100 : 0;
 
-// Gradiente dinâmico fundo
+// Fundo dinâmico
 let cor;
 if(atingimento >= 100){
 cor = "#16a34a20";
@@ -52,17 +55,17 @@ barra.style.background =
 atingimento >= 100
 ? "linear-gradient(90deg,#16a34a,#34d399)"
 : "linear-gradient(90deg,#dc2626,#f87171)";
+
+return {
+hora:new Date().toLocaleTimeString(),
+meta:metaHora,
+real:producao
+};
 }
 
 function registrar(){
-calcular();
-
-historico.push({
-hora:new Date().toLocaleTimeString(),
-meta:get("metaHora"),
-real:get("quantidade") * get("metroPorPeca")
-});
-
+const dados = calcular();
+historico.push(dados);
 atualizarGrafico();
 }
 
@@ -110,13 +113,18 @@ if(chart) chart.destroy();
 }
 
 function exportarExcel(){
-if(historico.length===0){alert("Sem dados!");return;}
+if(historico.length===0){
+alert("Sem dados!");
+return;
+}
+
 const dados=historico.map(h=>({
 Hora:h.hora,
 Meta:h.meta,
 Real:h.real,
 Atingimento:h.meta?((h.real/h.meta)*100).toFixed(1):0
 }));
+
 const ws=XLSX.utils.json_to_sheet(dados);
 const wb=XLSX.utils.book_new();
 XLSX.utils.book_append_sheet(wb,ws,"Produção");
